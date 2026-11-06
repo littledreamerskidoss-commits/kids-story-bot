@@ -68,7 +68,7 @@ def assemble_video(scenes, output_video_path, is_short=False):
         image_files.append(img_file)
         
     clips = [ImageClip(img).with_duration(duration_per_image) for img in image_files]
-    video = concatenate_videoclips(clips, method="compose").set_audio(audio)
+    video = concatenate_videoclips(clips, method="compose").with_audio(audio)
     video.write_videofile(output_video_path, fps=24, codec="libx264", audio_codec="aac")
 
 if __name__ == "__main__":
