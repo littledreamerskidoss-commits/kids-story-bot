@@ -5,10 +5,7 @@ import urllib.parse
 import requests
 import asyncio
 import edge_tts
-from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-from moviepy.audio.io.AudioFileClip import AudioFileClip
-from moviepy.video.compositing.concatenate import concatenate_videoclips
-from moviepy.video.VideoClip import ImageClip
+from moviepy import ImageClip, AudioFileClip, concatenate_videoclips
 
 def generate_long_story():
     # Adapts based on automated self-updates if channel_memory exists
