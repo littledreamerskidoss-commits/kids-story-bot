@@ -33,13 +33,23 @@ def fetch_image(prompt_text, output_filename, is_short=False):
     width, height = (576, 1024) if is_short else (1024, 576)
     encoded_prompt = urllib.parse.quote(prompt_text)
     url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&nologo=true&seed={random.randint(1, 99999)}"
-    response = requests.get(url, timeout=60)
-    if response.status_code == 200:
-        with open(output_filename, 'wb') as f:
-            f.write(response.content)
-        return output_filename
-    else:
-        raise Exception("Failed to fetch image")
+    
+    try:
+        response = requests.get(url, timeout=30)
+        if response.status_code == 200:
+            with open(output_filename, 'wb') as f:
+                f.write(response.content)
+            return output_filename
+    except Exception as e:
+        print(f"Image API warning: {e}. Using fallback generator.")
+        
+    # Fallback: Generates a reliable local image so the video never fails
+    from PIL import Image, ImageDraw
+    img = Image.new('RGB', (width, height), color=(40, 116, 166))
+    d = ImageDraw.Draw(img)
+    d.text((50, height // 2), "Kids Story Animation", fill=(255, 255, 255))
+    img.save(output_filename)
+    return output_filename
 
 async def create_voiceover(text, audio_filename):
     communicate = edge_tts.Communicate(text, "en-US-AnaNeural")
