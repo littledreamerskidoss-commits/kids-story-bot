@@ -1,0 +1,62 @@
+name: Fully Automated Kids Video Pipeline
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # Long Video 1
+    - cron: '0 6 * * *'   # Long Video 2
+    - cron: '0 10 * * *'  # Long Video 3
+    - cron: '0 14 * * *'  # Long Video 4
+    - cron: '0 18 * * *'  # Long Video 5
+    - cron: '0 11 * * *'  # Short 1
+    - cron: '0 16 * * *'  # Short 2
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 25
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install edge-tts moviepy requests google-api-python-client google-auth-oauthlib google-auth-httplib2
+
+      - name: Run Analytics & Self-Update
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          python analyze_and_update.py
+
+      - name: Generate Video File
+        env:
+          VIDEO_TYPE: ${{ github.event.schedule == '0 11 * * *' || github.event.schedule == '0 16 * * *' && 'short' || 'long' }}
+        run: |
+          python main_pipeline.py
+
+      - name: Upload Video to YouTube
+        env:
+          VIDEO_TYPE: ${{ github.event.schedule == '0 11 * * *' || github.event.schedule == '0 16 * * *' && 'short' || 'long' }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          python upload_to_youtube.py
+
+      - name: Commit Automated Updates Back to Repo
+        run: |
+          git config --global user.name "AutoBot"
+          git config --global user.email "bot@automation.local"
+          git add channel_memory.json
+          git commit -m "Auto-update channel strategy based on latest analytics" || echo "No changes to commit"
+          git push
