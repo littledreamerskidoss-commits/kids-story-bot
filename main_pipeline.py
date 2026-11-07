@@ -35,13 +35,8 @@ CHARACTERS = [
 ]
 
 def generate_story_for_day(day_num, content_type="video", lang="en"):
-    """
-    Generates a unique story for any given day (Day 1 to 100),
-    tailored specifically for full videos (7 scenes) or YouTube Shorts (3 scenes).
-    """
     theme_name, theme_desc = THEMES[(day_num - 1) % len(THEMES)]
     char_name, char_style = CHARACTERS[(day_num - 1) % len(CHARACTERS)]
-    
     scene_count = 3 if content_type == "short" else 7
     
     templates = {
