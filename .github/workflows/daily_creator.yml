@@ -72,6 +72,10 @@ jobs:
 
       - name: Upload to YouTube
         env:
+          DAY_NUMBER: ${{ env.DAY_NUM }}
+          CONTENT_TYPE: ${{ matrix.type }}
+          CONTENT_INDEX: ${{ matrix.index }}
+          STORY_LANG: ${{ github.event.inputs.story_lang || 'en' }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
