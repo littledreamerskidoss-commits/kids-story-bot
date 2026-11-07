@@ -18,15 +18,33 @@ def upload_video():
     
     youtube = build("youtube", "v3", credentials=creds)
     
-    is_short = os.environ.get("VIDEO_TYPE") == "short"
-    file_path = "final_short.mp4" if is_short else "final_video.mp4"
-    title = "Bedtime Story for Kids - Animated Adventure #Shorts" if is_short else "Magical Bedtime Story for Kids | Moral Animated Tale"
+    # Retrieve environment variables passed by GitHub Actions Matrix
+    day_num = os.environ.get("DAY_NUMBER", "1")
+    content_type = os.environ.get("CONTENT_TYPE", "short")
+    content_index = os.environ.get("CONTENT_INDEX", "1")
+    story_lang = os.environ.get("STORY_LANG", "en").lower()
+    
+    # Match the exact file naming convention from main_pipeline.py
+    file_path = f"day_{day_num}_{content_type}_{content_index}_{story_lang}.mp4"
+    
+    is_short = (content_type == "short")
+    
+    # Dynamic titles based on content type and language
+    if is_short:
+        title = f"Day {day_num} Kids Story #Shorts ({story_lang.upper()})"
+    else:
+        title = f"Day {day_num} - Magical Bedtime Story for Kids ({story_lang.upper()})"
+    
+    print(f"Preparing to upload: {file_path} as '{title}'")
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Error: Video file not found at '{file_path}'")
     
     body = {
         "snippet": {
             "title": title,
-            "description": "Enjoy this wonderful animated story for kids, created automatically!",
-            "tags": ["kids animation", "bedtime stories", "moral stories", "cartoons"],
+            "description": f"Enjoy this wonderful automated animated story for kids! Day {day_num}.",
+            "tags": ["kids animation", "bedtime stories", "moral stories", "cartoons", story_lang],
             "categoryId": "1"
         },
         "status": {
