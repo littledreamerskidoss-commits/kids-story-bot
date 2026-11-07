@@ -18,22 +18,18 @@ def upload_video():
     
     youtube = build("youtube", "v3", credentials=creds)
     
-    # Retrieve environment variables passed by GitHub Actions Matrix
     day_num = os.environ.get("DAY_NUMBER", "1")
     content_type = os.environ.get("CONTENT_TYPE", "short")
     content_index = os.environ.get("CONTENT_INDEX", "1")
     story_lang = os.environ.get("STORY_LANG", "en").lower()
     
-    # Match the exact file naming convention from main_pipeline.py
     file_path = f"day_{day_num}_{content_type}_{content_index}_{story_lang}.mp4"
-    
     is_short = (content_type == "short")
     
-    # Dynamic titles based on content type and language
     if is_short:
         title = f"Day {day_num} Kids Story #Shorts ({story_lang.upper()})"
     else:
-        title = f"Day {day_num} - Magical Bedtime Story for Kids ({story_lang.upper()})"
+        title = f"Day {day_num} Magical Adventure ({story_lang.upper()})"
     
     print(f"Preparing to upload: {file_path} as '{title}'")
     
@@ -43,7 +39,7 @@ def upload_video():
     body = {
         "snippet": {
             "title": title,
-            "description": f"Enjoy this wonderful automated animated story for kids! Day {day_num}.",
+            "description": f"Enjoy Day {day_num} magical adventure! Perfect for children ages 3-7. #KidsStories #MoralStories #KidsCartoon #{story_lang}",
             "tags": ["kids animation", "bedtime stories", "moral stories", "cartoons", story_lang],
             "categoryId": "1"
         },
