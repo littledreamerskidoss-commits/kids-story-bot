@@ -1,62 +1,79 @@
-name: Fully Automated Kids Video Pipeline
+name: 100-Day Automated Daily Content Pipeline
 
 on:
   schedule:
-    - cron: '0 2 * * *'   # Long Video 1
-    - cron: '0 6 * * *'   # Long Video 2
-    - cron: '0 10 * * *'  # Long Video 3
-    - cron: '0 14 * * *'  # Long Video 4
-    - cron: '0 18 * * *'  # Long Video 5
-    - cron: '0 11 * * *'  # Short 1
-    - cron: '0 16 * * *'  # Short 2
+    - cron: '0 0 * * *' # Automatically runs once every single day at midnight UTC
   workflow_dispatch:
+    inputs:
+      day_number:
+        description: 'Specify Day Number (1 to 100)'
+        required: true
+        default: '1'
+      story_lang:
+        description: 'Language (en, hi, ta)'
+        required: true
+        default: 'en'
 
 jobs:
-  build-and-publish:
+  generate-and-publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    timeout-minutes: 25
+    strategy:
+      matrix:
+        # Generate 2 Long Videos and 5 Shorts per day automatically
+        include:
+          - type: "video"
+            index: 1
+          - type: "video"
+            index: 2
+          - type: "short"
+            index: 1
+          - type: "short"
+            index: 2
+          - type: "short"
+            index: 3
+          - type: "short"
+            index: 4
+          - type: "short"
+            index: 5
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
       - name: Install Dependencies
         run: |
-          pip install edge-tts moviepy requests google-api-python-client google-auth-oauthlib google-auth-httplib2
+          python -m pip install --upgrade pip
+          pip install requests pillow gtts edge-tts moviepy google-api-python-client google-auth google-auth-oauthlib google-auth-httplib2
 
-      - name: Run Analytics & Self-Update
-        env:
-          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      - name: Calculate Current Day Number
+        id: day_calc
         run: |
-          python analyze_and_update.py
+          if [ "${{ github.event.inputs.day_number }}" != "" ]; then
+            echo "DAY_NUM=${{ github.event.inputs.day_number }}" >> $GITHUB_ENV
+          else
+            # Automatically increments day number from 1 to 100
+            DAY=$(( ( $(date +%j) % 100 ) + 1 ))
+            echo "DAY_NUM=$DAY" >> $GITHUB_ENV
+          fi
 
-      - name: Generate Video File
+      - name: Generate Video / Short
         env:
-          VIDEO_TYPE: ${{ github.event.schedule == '0 11 * * *' || github.event.schedule == '0 16 * * *' && 'short' || 'long' }}
+          DAY_NUMBER: ${{ env.DAY_NUM }}
+          CONTENT_TYPE: ${{ matrix.type }}
+          CONTENT_INDEX: ${{ matrix.index }}
+          STORY_LANG: ${{ github.event.inputs.story_lang || 'en' }}
         run: |
           python main_pipeline.py
 
-      - name: Upload Video to YouTube
+      - name: Upload to YouTube
         env:
-          VIDEO_TYPE: ${{ github.event.schedule == '0 11 * * *' || github.event.schedule == '0 16 * * *' && 'short' || 'long' }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: |
           python upload_to_youtube.py
-
-      - name: Commit Automated Updates Back to Repo
-        run: |
-          git config --global user.name "AutoBot"
-          git config --global user.email "bot@automation.local"
-          git add channel_memory.json
-          git commit -m "Auto-update channel strategy based on latest analytics" || echo "No changes to commit"
-          git push
